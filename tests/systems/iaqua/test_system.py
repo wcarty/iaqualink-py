@@ -136,3 +136,17 @@ class TestIaquaSystem(TestBaseSystem):
 
         with pytest.raises(AqualinkServiceUnauthorizedException):
             await self.sut._send_devices_screen_request()
+
+    @patch("httpx.AsyncClient.request")
+    async def test_set_salt_production(self, mock_request) -> None:
+        mock_request.return_value.status_code = 200
+        mock_request.return_value.json = MagicMock(return_value={"home_screen": [{"status": "Online"}]})
+        
+        with patch.object(self.sut, "_parse_home_response"):
+            await self.sut.set_salt_production("salt_system", 75)
+        
+        mock_request.assert_called_once()
+        request_url = str(mock_request.call_args[1]["url"])
+        assert "set_salt_production" in request_url
+        assert "device=salt_system" in request_url
+        assert "level=75" in request_url
