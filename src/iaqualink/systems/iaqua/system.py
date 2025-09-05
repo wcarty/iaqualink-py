@@ -29,6 +29,7 @@ IAQUA_COMMAND_SET_AUX = "set_aux"
 IAQUA_COMMAND_SET_LIGHT = "set_light"
 IAQUA_COMMAND_SET_POOL_HEATER = "set_pool_heater"
 IAQUA_COMMAND_SET_POOL_PUMP = "set_pool_pump"
+IAQUA_COMMAND_SET_SALT_PRODUCTION = "set_salt_production"
 IAQUA_COMMAND_SET_SOLAR_HEATER = "set_solar_heater"
 IAQUA_COMMAND_SET_SPA_HEATER = "set_spa_heater"
 IAQUA_COMMAND_SET_SPA_PUMP = "set_spa_pump"
@@ -187,3 +188,9 @@ class IaquaSystem(AqualinkSystem):
     async def set_light(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
         self._parse_devices_response(r)
+
+    async def set_salt_production(self, device_name: str, level: int) -> None:
+        """Set salt production level for the specified device."""
+        data = {"device": device_name, "level": str(level)}
+        r = await self._send_session_request(IAQUA_COMMAND_SET_SALT_PRODUCTION, data)
+        self._parse_home_response(r)

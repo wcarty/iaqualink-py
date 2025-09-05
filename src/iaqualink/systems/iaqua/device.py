@@ -8,6 +8,7 @@ from iaqualink.device import (
     AqualinkBinarySensor,
     AqualinkDevice,
     AqualinkLight,
+    AqualinkSaltSystem,
     AqualinkSensor,
     AqualinkSwitch,
     AqualinkThermostat,
@@ -89,6 +90,9 @@ class IaquaDevice(AqualinkDevice):
             "_present"
         ):
             class_ = IaquaBinarySensor
+        elif any(keyword in data["name"].lower() for keyword in ["salt", "aquapure", "chlor"]) or \
+             (data.get("label", "").upper() in ["AQUAPURE", "SALT SYSTEM", "CHLORINATOR"]):
+            class_ = IaquaAquaPure
         elif data["name"].startswith("aux_"):
             if data["type"] == "2":
                 class_ = light_subtype_to_class[data["subtype"]]
@@ -470,3 +474,29 @@ class IaquaThermostat(IaquaSwitch, AqualinkThermostat):
     async def turn_off(self) -> None:
         if self._heater.is_on is True:
             await self._heater.turn_off()
+
+
+class IaquaAquaPure(IaquaDevice, AqualinkSaltSystem):
+    """AquaPure salt chlorination system for iAqualink."""
+
+    @property
+    def production_level(self) -> int:
+        """Current production level as a percentage (0-100)."""
+        # The state should contain the current production level
+        try:
+            return int(self.state)
+        except (ValueError, TypeError):
+            return 0
+
+    async def set_production_level(self, level: int) -> None:
+        """Set the salt production level (0-100%)."""
+        from iaqualink.exception import AqualinkInvalidParameterException
+
+        # Validate the production level range
+        if level < self.min_production_level or level > self.max_production_level:
+            msg = f"{level}% isn't a valid production level."
+            msg += f" Use values between {self.min_production_level}% and {self.max_production_level}%."
+            raise AqualinkInvalidParameterException(msg)
+
+        # Set the production level through the system
+        await self.system.set_salt_production(self.name, level)

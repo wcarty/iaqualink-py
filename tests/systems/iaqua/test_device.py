@@ -9,6 +9,7 @@ from iaqualink.systems.iaqua.device import (
     IAQUA_TEMP_CELSIUS_LOW,
     IAQUA_TEMP_FAHRENHEIT_HIGH,
     IAQUA_TEMP_FAHRENHEIT_LOW,
+    IaquaAquaPure,
     IaquaAuxSwitch,
     IaquaBinarySensor,
     IaquaColorLight,
@@ -457,3 +458,59 @@ class TestIaquaThermostat(TestIaquaDevice, TestBaseThermostat):
 
     async def test_temp_name_no_spa(self) -> None:
         assert self.pool_set_point._temperature == "temp1"
+
+
+class TestIaquaAquaPure(TestIaquaDevice):
+    def setUp(self) -> None:
+        super().setUp()
+
+        data = {"name": "salt_system", "state": "50", "label": "AQUAPURE"}
+        self.sut = IaquaAquaPure(self.system, data)
+        self.sut_class = IaquaAquaPure
+
+    def test_inheritance(self) -> None:
+        from iaqualink.device import AqualinkSaltSystem
+        assert isinstance(self.sut, AqualinkSaltSystem)
+
+    def test_property_production_level(self) -> None:
+        assert self.sut.production_level == 50
+
+    def test_property_production_level_invalid(self) -> None:
+        self.sut.data["state"] = "invalid"
+        assert self.sut.production_level == 0
+
+    def test_property_max_production_level(self) -> None:
+        assert self.sut.max_production_level == 100
+
+    def test_property_min_production_level(self) -> None:
+        assert self.sut.min_production_level == 0
+
+    async def test_set_production_level_75(self) -> None:
+        with patch.object(self.sut.system, "set_salt_production") as mock:
+            await self.sut.set_production_level(75)
+            mock.assert_called_once_with("salt_system", 75)
+
+    async def test_set_production_level_invalid_high(self) -> None:
+        from iaqualink.exception import AqualinkInvalidParameterException
+        with pytest.raises(AqualinkInvalidParameterException):
+            await self.sut.set_production_level(150)
+
+    async def test_set_production_level_invalid_low(self) -> None:
+        from iaqualink.exception import AqualinkInvalidParameterException
+        with pytest.raises(AqualinkInvalidParameterException):
+            await self.sut.set_production_level(-10)
+
+    def test_from_data_salt_system(self) -> None:
+        data = {"name": "salt_system", "state": "75"}
+        device = IaquaDevice.from_data(self.system, data)
+        assert isinstance(device, IaquaAquaPure)
+
+    def test_from_data_aquapure_label(self) -> None:
+        data = {"name": "aux_1", "state": "50", "label": "AQUAPURE"}
+        device = IaquaDevice.from_data(self.system, data)
+        assert isinstance(device, IaquaAquaPure)
+
+    def test_from_data_chlorinator_label(self) -> None:
+        data = {"name": "aux_2", "state": "25", "label": "CHLORINATOR"}
+        device = IaquaDevice.from_data(self.system, data)
+        assert isinstance(device, IaquaAquaPure)

@@ -133,3 +133,26 @@ class AqualinkThermostat(AqualinkSwitch, AqualinkDevice):
 
     async def set_temperature(self, _: int) -> None:
         raise NotImplementedError
+
+
+class AqualinkSaltSystem(AqualinkDevice):
+    """Salt water chlorination system with adjustable production level."""
+
+    @property
+    def production_level(self) -> int:
+        """Current production level as a percentage (0-100)."""
+        raise NotImplementedError
+
+    @property
+    def max_production_level(self) -> int:
+        """Maximum production level (typically 100)."""
+        return 100
+
+    @property
+    def min_production_level(self) -> int:
+        """Minimum production level (typically 0)."""
+        return 0
+
+    async def set_production_level(self, level: int) -> None:
+        """Set the salt production level (0-100%)."""
+        raise NotImplementedError
